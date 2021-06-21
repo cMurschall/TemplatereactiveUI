@@ -8,7 +8,6 @@ namespace Coherent.Project.Wpf.Template.Base.Mediator.RequestHandlers.Device
 {
     public class DeviceConnectRequestHandler : IRequestHandler<DeviceConnectRequest, bool>
     {
-
         private readonly IDeviceService _deviceService;
 
         public DeviceConnectRequestHandler(IDeviceService deviceService)
@@ -18,6 +17,8 @@ namespace Coherent.Project.Wpf.Template.Base.Mediator.RequestHandlers.Device
 
 
         public Task<bool> Handle(DeviceConnectRequest request, CancellationToken cancellationToken)
-            => _deviceService.Connect( cancellationToken);
+        {
+            return _deviceService.Connect(cancellationToken);
+        }
     }
 }

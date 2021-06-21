@@ -1,18 +1,12 @@
 ﻿using Coherent.Project.Wpf.Template.Gui;
 using Coherent.Project.Wpf.Template.Gui.Views;
-using ReactiveUI;
-using System;
-using System.Collections.Generic;
-using System.Configuration;
-using System.Data;
-using System.Linq;
-using System.Threading.Tasks;
+using SimpleInjector;
 using System.Windows;
 
 namespace Coherent.Project.Wpf.Template
 {
     /// <summary>
-    /// Interaction logic for App.xaml
+    ///     Interaction logic for App.xaml
     /// </summary>
     public partial class App : Application
     {
@@ -36,12 +30,9 @@ namespace Coherent.Project.Wpf.Template
             //}
 
 
-
-            var container = Bootstrapper.CreateContainer();
-            var mainWindow = container.GetInstance<MainWindow>();
+            Container container = Bootstrapper.CreateContainer();
+            MainWindow mainWindow = container.GetInstance<MainWindow>();
             mainWindow.Show();
-
-
         }
     }
 }

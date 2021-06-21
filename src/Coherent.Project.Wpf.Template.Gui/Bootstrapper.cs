@@ -1,4 +1,5 @@
 ﻿// unset
+
 using Coherent.Project.Wpf.Template.Base.Redux.Reducers;
 using Coherent.Project.Wpf.Template.Base.Redux.Reducers.Device;
 using Coherent.Project.Wpf.Template.Base.Redux.States;
@@ -13,6 +14,7 @@ using SimpleInjector;
 using Splat;
 using Splat.SimpleInjector;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Threading;
@@ -31,7 +33,9 @@ namespace Coherent.Project.Wpf.Template.Gui
             container.Register<IDeviceStateReducer, DeviceStateReducer>();
             container.Register<IApplicationReducer, ApplicationReducer>();
 
-            container.Register<IStore<ApplicationState>>(() => new Store<ApplicationState>(container.GetInstance<IApplicationReducer>().Reduce, ApplicationState.CreateInitialState()), Lifestyle.Singleton);
+            container.Register<IStore<ApplicationState>>(
+                () => new Store<ApplicationState>(container.GetInstance<IApplicationReducer>().Reduce,
+                    ApplicationState.CreateInitialState()), Lifestyle.Singleton);
 
             #endregion
 
@@ -47,37 +51,42 @@ namespace Coherent.Project.Wpf.Template.Gui
 
             container.RegisterSingleton<IMediator, Mediator>();
 
-            var assembly = GetAssembly();
+            Assembly assembly = GetAssembly();
             container.Register(typeof(IRequestHandler<,>), assembly);
             container.Register(typeof(INotificationHandler<>), assembly);
 
-            RegisterHandlers(container, typeof(INotificationHandler<>), new[] { assembly });
-            RegisterHandlers(container, typeof(IRequestExceptionAction<,>), new[] { assembly });
-            RegisterHandlers(container, typeof(IRequestExceptionHandler<,,>), new[] { assembly });
+            RegisterHandlers(container, typeof(INotificationHandler<>), new[] {assembly});
+            RegisterHandlers(container, typeof(IRequestExceptionAction<,>), new[] {assembly});
+            RegisterHandlers(container, typeof(IRequestExceptionHandler<,,>), new[] {assembly});
 
             //Pipeline
-            container.Collection.Register(typeof(IPipelineBehavior<,>), new[]
-            {
-                typeof(RequestExceptionProcessorBehavior<,>),
-                typeof(RequestExceptionActionProcessorBehavior<,>),
-                typeof(RequestPreProcessorBehavior<,>),
-                typeof(RequestPostProcessorBehavior<,>),
-                typeof(EmptyPipelineBehavior<,>)
-            });
+            container.Collection.Register(typeof(IPipelineBehavior<,>),
+                new[] {
+                    typeof(RequestExceptionProcessorBehavior<,>), typeof(RequestExceptionActionProcessorBehavior<,>),
+                    typeof(RequestPreProcessorBehavior<,>), typeof(RequestPostProcessorBehavior<,>),
+                    typeof(EmptyPipelineBehavior<,>)
+                });
 
-            container.Collection.Register(typeof(IRequestPreProcessor<>), new[] { typeof(EmptyRequestPreProcessor<>) });
-            container.Collection.Register(typeof(IRequestPostProcessor<,>), new[] { typeof(EmptyRequestPostProcessor<,>) });
+            container.Collection.Register(typeof(IRequestPreProcessor<>), new[] {typeof(EmptyRequestPreProcessor<>)});
+            container.Collection.Register(typeof(IRequestPostProcessor<,>),
+                new[] {typeof(EmptyRequestPostProcessor<,>)});
 
             container.Register(() => new ServiceFactory(container.GetInstance), Lifestyle.Singleton);
 
             #endregion
+
 
             #region GUI
 
             container.Register<MainViewModel>();
             container.Register<MainWindow>();
 
+            // container.Register<IViewFor<MainViewModel>, MainWindow>();
+            container.Register<IViewFor<DeviceAViewModel>, DeviceAView>();
+            container.Register<IViewFor<DeviceBViewModel>, DeviceBView>();
+
             var initializer = new SimpleInjectorInitializer();
+
             Locator.SetLocator(initializer);
 
             // Register ReactiveUI dependencies
@@ -95,15 +104,13 @@ namespace Coherent.Project.Wpf.Template.Gui
 #if DEBUG
             container.Verify(VerificationOption.VerifyAndDiagnose);
 #endif
-
-
-
             return container;
         }
 
 
         private static Assembly GetAssembly()
         {
+            // TODO: replace this
             var assemblyNamespace = "Coherent.Project.Wpf.Template.Base";
             if (assemblyNamespace == "Coherent.Project.Wpf.Template.Base")
             {
@@ -119,25 +126,23 @@ namespace Coherent.Project.Wpf.Template.Gui
         private static void RegisterHandlers(Container container, Type collectionType, Assembly[] assemblies)
         {
             // we have to do this because by default, generic type definitions (such as the Constrained Notification Handler) won't be registered
-            var handlerTypes = container.GetTypesToRegister(collectionType, assemblies, new TypesToRegisterOptions {
-                IncludeGenericTypeDefinitions = true,
-                IncludeComposites = false,
-            });
+            IEnumerable<Type> handlerTypes = container.GetTypesToRegister(collectionType, assemblies,
+                new TypesToRegisterOptions {IncludeGenericTypeDefinitions = true, IncludeComposites = false});
 
             container.Collection.Register(collectionType, handlerTypes);
         }
-
     }
-
 
 
     public class EmptyPipelineBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, TResponse>
     {
-        public async Task<TResponse> Handle(TRequest request, CancellationToken cancellationToken, RequestHandlerDelegate<TResponse> next)
+        public Task<TResponse> Handle(TRequest request, CancellationToken cancellationToken,
+            RequestHandlerDelegate<TResponse> next)
         {
-            return await next();
+            return next();
         }
     }
+
     public class EmptyRequestPreProcessor<TRequest> : IRequestPreProcessor<TRequest>
     {
         public Task Process(TRequest request, CancellationToken cancellationToken)
@@ -145,6 +150,7 @@ namespace Coherent.Project.Wpf.Template.Gui
             return Task.CompletedTask;
         }
     }
+
     public class EmptyRequestPostProcessor<TRequest, TResponse> : IRequestPostProcessor<TRequest, TResponse>
     {
         public Task Process(TRequest request, TResponse response, CancellationToken cancellationToken)

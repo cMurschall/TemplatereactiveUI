@@ -1,68 +1,58 @@
 ﻿using Coherent.Project.Wpf.Template.Base.Mediator.Requests.Device;
 using Coherent.Project.Wpf.Template.Base.Redux.States;
+using Coherent.Project.Wpf.Template.Base.Redux.States.Device;
 using MediatR;
 using ReactiveUI;
-using ReactiveUI.Fody.Helpers;
 using Redux;
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Reactive.Disposables;
 using System.Reactive.Linq;
-using System.Security.Cryptography.X509Certificates;
-using System.Text;
-using System.Threading.Tasks;
 using Unit = System.Reactive.Unit;
 
 namespace Coherent.Project.Wpf.Template.Gui.ViewModels
 {
-    public class MainViewModel : ReactiveObject, IActivatableViewModel
+    public class MainViewModel : ActivatableViewModelBase
     {
-        private readonly IStore<ApplicationState> _store;
         private readonly IMediator _mediator;
-
-        private Random _random = new Random();
-        public ViewModelActivator Activator { get; }
+        private readonly Random _random = new();
 
 
-        [ObservableAsProperty]
-        // ReSharper disable once UnassignedGetOnlyAutoProperty
-        public double DeviceValue { get; }
-
-
-        public ReactiveCommand<Unit, bool> UpdateDeviceValue { get; }
-
-
+        // ReSharper disable once SuggestBaseTypeForParameter (DI will fail otherwise)
         public MainViewModel(IStore<ApplicationState> store, IMediator mediator)
         {
-            _store = store;
-            _mediator = mediator;
-
-            Activator = new ViewModelActivator();
-
-            UpdateDeviceValue = ReactiveCommand.CreateFromTask( token => mediator.Send(new SetValueRequest {Value = _random.Next(10, 100)}, token));
-
-
+            ApplicationState = store ?? throw new ArgumentNullException(nameof(store));
+            _mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
 
 
             this.WhenActivated(disposables => {
-
-                store
-                          .Select(x => x.DeviceState.DeviceValue)
-                          .DistinctUntilChanged()
-                          .ObserveOn(RxApp.MainThreadScheduler)
-                          .ToPropertyEx(this, x => x.DeviceValue)
-                          .DisposeWith(disposables);
-
-
-
                 HandleActivation();
+
+
+                // canExecute observable example
+                var canExecuteUpdateDeviceValue = store.Select(x => x.DeviceState.DeviceType != DeviceType.Unknown);
+                // create the device update command
+                UpdateDeviceValue = ReactiveCommand.CreateFromTask(token =>
+                        mediator.Send(new SetValueRequest { Value = _random.Next(10, 100) }, token), canExecuteUpdateDeviceValue.ObserveOn(RxApp.MainThreadScheduler))
+                    .DisposeWith(disposables);
+
+
 
                 Disposable
                     .Create(HandleDeactivation)
                     .DisposeWith(disposables);
             });
         }
+
+        /// <summary>
+        ///     Gets the application state as an IObservable
+        /// </summary>
+        public IObservable<ApplicationState> ApplicationState { get; }
+
+
+        /// <summary>
+        ///     Gets a command that assigns a new value to the device
+        /// </summary>
+        public ReactiveCommand<Unit, bool> UpdateDeviceValue { get; private set; }
 
         private void HandleDeactivation()
         {

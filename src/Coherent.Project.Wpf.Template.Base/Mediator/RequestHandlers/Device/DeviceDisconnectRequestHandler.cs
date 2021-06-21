@@ -8,7 +8,6 @@ namespace Coherent.Project.Wpf.Template.Base.Mediator.RequestHandlers.Device
 {
     public class DeviceDisconnectRequestHandler : IRequestHandler<DeviceDisconnectRequest, bool>
     {
-
         private readonly IDeviceService _deviceService;
 
         public DeviceDisconnectRequestHandler(IDeviceService deviceService)
@@ -18,6 +17,8 @@ namespace Coherent.Project.Wpf.Template.Base.Mediator.RequestHandlers.Device
 
 
         public Task<bool> Handle(DeviceDisconnectRequest request, CancellationToken cancellationToken)
-            => _deviceService.Disconnect(cancellationToken);
+        {
+            return _deviceService.Disconnect(cancellationToken);
+        }
     }
 }
